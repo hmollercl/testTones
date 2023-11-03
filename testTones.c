@@ -86,7 +86,7 @@ static LV2_Descriptor const descriptor =
     "https://github.com/hmollercl/testTones",
     instantiate,
     connect_port,
-    /*activate*/ NULL,
+    activate /*NULL*/,
     run,
     /*deactivate*/ NULL,
     cleanup,
