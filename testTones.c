@@ -2,20 +2,26 @@
 #include "stddef.h"
 #include "stdint.h"
 #include "stdlib.h"
-//#include "math.h"
+#include "math.h"
 #include "lv2.h"
+#ifndef M_PI
+#    define M_PI 3.14159265358979323846
+#endif
 
 /* class definition */
 typedef struct {
-    float* out;
-    float* freq;
-    float* level;
+    float* out_ptr;
+    float* freq_ptr;
+    float* level_ptr;
+    double rate;
+    double position;
 } testTones;
 
 
 /* internal core methods */
 static LV2_Handle instantiate (const struct LV2_Descriptor *descriptor, double sample_rate, const char *bundle_path, const LV2_Feature *const *features){
     testTones* m = (testTones*) calloc (1, sizeof (testTones));
+    m->rate = sample_rate;
     return m;
 }
 
@@ -25,15 +31,15 @@ static void connect_port (LV2_Handle instance, uint32_t port, void *data_locatio
 
     switch (port){
     case 0:
-        m->out = (float*) data_location;
+        m->out_ptr = (float*) data_location;
         break;
 
     case 1:
-        m->freq = (float*) data_location;
+        m->freq_ptr = (float*) data_location;
         break;
     
     case 2:
-        m->level = (float*) data_location;
+        m->level_ptr = (float*) data_location;
         break;
 
     default:
@@ -42,23 +48,18 @@ static void connect_port (LV2_Handle instance, uint32_t port, void *data_locatio
 }
 
 static void activate (LV2_Handle instance){
-    /* not needed here */
+    testTones* m = (testTones*) instance;
+    if (m)
+        m->position = 0.0;
 }
 
 static void run (LV2_Handle instance, uint32_t sample_count){
     testTones* m = (testTones*) instance;
     if (!m) return;
-    if ((!m->audio_in_ptr) || (!m->audio_out_a_ptr) || (!m->audio_out_b_ptr) || (!m->channel_ptr)) return;
 
     for (uint32_t i = 0; i < sample_count; ++i){
-        if (*(m->channel_ptr) <= 0.5){
-            m->audio_out_a_ptr[i] = m->audio_in_ptr[i];
-            m->audio_out_b_ptr[i] = 0;
-        }
-        else{
-            m->audio_out_b_ptr[i] = m->audio_in_ptr[i];
-            m->audio_out_a_ptr[i] = 0;
-        }
+        m->out_ptr[i] = sin (2.0 * M_PI * m->position) * *(m->level_ptr);
+        m->position += *(m->freq_ptr) / m->rate;
     }
 }
 
