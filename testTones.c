@@ -4,15 +4,21 @@
 #include "stdlib.h"
 #include "math.h"
 #include "lv2.h"
+
 #ifndef M_PI
 #    define M_PI 3.14159265358979323846
 #endif
+
+enum Ports{ OUT = 0, FREQ = 1, LEVEL = 2 , WAVEFORM = 3};
+enum Wave{ SINE = 0, TRIANGLE = 1, SQUARE = 2, SAW = 3};
 
 /* class definition */
 typedef struct {
     float* out_ptr;
     float* freq_ptr;
     float* level_ptr;
+    float* wave_ptr;  // didn't worked with uint8_t and int
+
     double rate;
     double position;
 } testTones;
@@ -30,18 +36,18 @@ static void connect_port (LV2_Handle instance, uint32_t port, void *data_locatio
     if (!m) return;
 
     switch (port){
-    case 0:
+    case OUT:
         m->out_ptr = (float*) data_location;
         break;
-
-    case 1:
+    case FREQ:
         m->freq_ptr = (float*) data_location;
         break;
-    
-    case 2:
+    case LEVEL:
         m->level_ptr = (float*) data_location;
         break;
-
+    case WAVEFORM:
+        m->wave_ptr = (float*) data_location;
+        break;
     default:
         break;
     }
@@ -55,10 +61,33 @@ static void activate (LV2_Handle instance){
 
 static void run (LV2_Handle instance, uint32_t sample_count){
     testTones* m = (testTones*) instance;
+    float p;
+    float out;
+
     if (!m) return;
 
     for (uint32_t i = 0; i < sample_count; ++i){
-        m->out_ptr[i] = sin (2.0 * M_PI * m->position) * *(m->level_ptr);
+        p = fmod (m->position, 1.0);
+
+        switch ((int)*m->wave_ptr){
+            case SINE:
+                out = sin (2.0 * M_PI * m->position);
+                break;
+            case TRIANGLE:
+                out = (p < 0.25 ? 4.0 * p : (p < 0.75 ? 1.0 - 4.0 * (p - 0.25) : -1.0 + 4.0 * (p - 0.75)));
+                break;
+            case SQUARE:
+                out = (p < 0.5 ? 1.0 : -1.0);
+                break;
+            case SAW:
+                out = (2.0 * p - 1.0) ;
+                break;
+            default:
+                out = 0.0;
+                break;
+        
+        }
+        m->out_ptr[i] = out * *(m->level_ptr);
         m->position += *(m->freq_ptr) / m->rate;
     }
 }
